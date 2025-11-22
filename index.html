@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Feedback Platform</title>
+    <!-- Load Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        /* Custom blue color inspired by the provided image */
+        .custom-blue-bg {
+            background-color: #1a73e8; /* Your requested blue */
+        }
+        .custom-blue-hover-bg:hover {
+            background-color: #1669d6; /* Slightly darker for hover */
+        }
+        .custom-blue-border {
+            border-color: #1a73e8;
+        }
+        .custom-blue-text {
+            color: #1a73e8;
+        }
+        .custom-blue-focus-ring:focus {
+            --tw-ring-color: #1a73e8;
+        }
+        .custom-blue-light-bg {
+            background-color: #e8f0fe; /* Lighter shade for feedback items */
+        }
+        .custom-blue-light-border {
+            border-color: #a8d1ff; /* Lighter border for feedback items */
+        }
+        .custom-blue-dark-text {
+            color: #1a57ad; /* Darker text for feedback item titles */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container" class="min-h-screen flex items-center justify-center p-4">
+        <!-- Main Content Will Be Rendered Here --></div>
+
+    <!-- Confirmation/Modal Box --><div id="modal-backdrop" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden items-center justify-center p-4 z-50">
+        <div id="modal-content" class="bg-white rounded-xl p-8 shadow-2xl w-full max-w-md transform transition-all duration-300 scale-95 opacity-0">
+            <h3 id="modal-title" class="text-xl font-semibold mb-4 custom-blue-text"></h3>
+            <p id="modal-message" class="text-gray-700 mb-6"></p>
+            <button onclick="closeModal()" class="w-full custom-blue-bg custom-blue-hover-bg text-white font-semibold py-2 px-4 rounded-lg transition duration-150 ease-in-out shadow-md">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // *** IMPORTANT: You MUST replace this with the URL obtained after deploying your Google Apps Script as a Web App. ***
+        // 您需要將此處替換為從 Apps Script 部署 Web App 後獲得的實際 URL。
+        const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLacZ2E7YKu7rGHGlDdo_PvHbyhNrClcLJKHcXIp3nYzLGZuS2SPr4gJQhnU0uUTSu/exec'; 
+
+        const appContainer = document.getElementById('app-container');
+        let feedbackFields = []; // Array to hold references to the dynamically added field containers
+        let nextId = 0;
+
+        /**
+         * Shows a custom modal box instead of using alert().
+         * @param {string} title
+         * @param {string} message
+         */
+        function showModal(title, message) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            const backdrop = document.getElementById('modal-backdrop');
+            const content = document.getElementById('modal-content');
+            
+            backdrop.classList.remove('hidden', 'items-center', 'justify-center');
+            backdrop.classList.add('flex', 'items-center', 'justify-center');
+            
+            // Trigger transition effects
+            setTimeout(() => {
+                content.classList.remove('scale-95', 'opacity-0');
+                content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        /** Closes the modal. */
+        function closeModal() {
+            const backdrop = document.getElementById('modal-backdrop');
+            const content = document.getElementById('modal-content');
+
+            content.classList.remove('scale-100', 'opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                backdrop.classList.remove('flex', 'items-center', 'justify-center');
+                backdrop.classList.add('hidden');
+            }, 300);
+        }
+
+        /**
+         * Renders the landing page.
+         */
+        function renderLandingPage() {
+            appContainer.innerHTML = `
+                <div class="bg-white p-8 md:p-12 rounded-xl shadow-2xl w-full max-w-lg text-center transform hover:scale-[1.02] transition-transform duration-300 border-t-4 custom-blue-border">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-4">Anonymous Feedback Submission</h1>
+                    <p class="text-gray-600 mb-8">
+                        Your input is valuable and completely confidential. This platform ensures all submissions are anonymous to encourage honest and constructive comments.
+                    </p>
+                    <button onclick="renderFormPage()" class="w-full custom-blue-bg custom-blue-hover-bg text-white font-semibold py-3 px-6 rounded-lg transition duration-300 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-2 custom-blue-focus-ring focus:ring-opacity-50">
+                        Continue to Feedback Form
+                    </button>
+                </div>
+            `;
+        }
+
+        /**
+         * Renders the main feedback form.
+         */
+        function renderFormPage() {
+            appContainer.innerHTML = `
+                <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 border-t-4 custom-blue-border">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Provide Your Anonymous Feedback</h2>
+                    
+                    <form id="feedbackForm" onsubmit="event.preventDefault(); submitFeedback();">
+                        <div id="feedbackFieldsContainer">
+                            <!-- Initial fields will be added here --></div>
+
+                        <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
+                            <button type="button" onclick="addFeedbackField()" class="flex items-center text-sm custom-blue-text hover:text-blue-800 font-medium transition duration-150">
+                                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Add More Focus Areas
+                            </button>
+                            <button type="submit" id="submitButton" class="custom-blue-bg custom-blue-hover-bg text-white font-semibold py-2 px-6 rounded-lg transition duration-300 ease-in-out shadow-lg focus:outline-none focus:ring-2 custom-blue-focus-ring focus:ring-opacity-50 disabled:opacity-50">
+                                Submit Feedback
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            // Initialize with one set of fields
+            feedbackFields = [];
+            nextId = 0;
+            addFeedbackField();
+        }
+
+        /**
+         * Adds a dynamic pair of Focus Area and Comments fields.
+         */
+        function addFeedbackField() {
+            const container = document.getElementById('feedbackFieldsContainer');
+            const id = nextId++;
+            const fieldId = `field-group-${id}`;
+
+            const fieldHTML = `
+                <div id="${fieldId}" class="custom-blue-light-bg p-4 rounded-lg mb-4 border custom-blue-light-border">
+                    <div class="flex justify-between items-start mb-3">
+                        <h3 class="text-md font-semibold custom-blue-dark-text">Feedback Item #${id + 1}</h3>
+                        ${id > 0 ? `<button type="button" onclick="removeFeedbackField('${fieldId}', ${id})" class="text-gray-500 hover:text-red-600 transition duration-150">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>` : ''}
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="focusArea-${id}" class="block text-sm font-medium text-gray-700 mb-1">Focus Area (e.g., Communication, Decision Making)</label>
+                        <input type="text" id="focusArea-${id}" name="focusArea" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 custom-blue-focus-ring focus:border-transparent" required>
+                    </div>
+
+                    <div class="mb-2">
+                        <label for="comments-${id}" class="block text-sm font-medium text-gray-700 mb-1">Detailed Comments</label>
+                        <textarea id="comments-${id}" name="comments" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 custom-blue-focus-ring focus:border-transparent" required></textarea>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', fieldHTML);
+            feedbackFields.push({ id: fieldId, index: id });
+        }
+
+        /**
+         * Removes a dynamic field group.
+         * @param {string} fieldId
+         * @param {number} indexToRemove
+         */
+        function removeFeedbackField(fieldId, indexToRemove) {
+            const element = document.getElementById(fieldId);
+            if (element) {
+                element.remove();
+                // Remove from the tracking array
+                feedbackFields = feedbackFields.filter(field => field.index !== indexToRemove);
+                // Renumber the titles
+                document.querySelectorAll('.custom-blue-light-bg').forEach((el, index) => {
+                    const titleElement = el.querySelector('h3');
+                    if (titleElement) {
+                        titleElement.textContent = `Feedback Item #${index + 1}`;
+                    }
+                });
+            }
+        }
+
+        /**
+         * Collects data from the form and submits it to Google Apps Script.
+         */
+        async function submitFeedback() {
+            const form = document.getElementById('feedbackForm');
+            const submitButton = document.getElementById('submitButton');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submitting...';
+
+            const feedbackData = [];
+            let isValid = true;
+
+            // Collect all data from the dynamically generated fields
+            feedbackFields.forEach(({ index }) => {
+                const focusAreaInput = document.getElementById(`focusArea-${index}`);
+                const commentsInput = document.getElementById(`comments-${index}`);
+
+                if (focusAreaInput && commentsInput && focusAreaInput.value.trim() && commentsInput.value.trim()) {
+                    feedbackData.push({
+                        focusArea: focusAreaInput.value.trim(),
+                        comment: commentsInput.value.trim()
+                    });
+                } else {
+                    isValid = false;
+                }
+            });
+            
+            if (feedbackData.length === 0) {
+                 showModal('Error', 'Please fill out at least one complete set of Focus Area and Detailed Comments.');
+                 submitButton.disabled = false;
+                 submitButton.textContent = 'Submit Feedback';
+                 return;
+            }
+
+            if (!isValid) {
+                showModal('Validation Error', 'All active Focus Area and Detailed Comments fields must be filled out.');
+                submitButton.disabled = false;
+                submitButton.textContent = 'Submit Feedback';
+                return;
+            }
+            
+            if (GOOGLE_APPS_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE' || !GOOGLE_APPS_SCRIPT_URL) {
+                showModal('Configuration Error', 'The Google Apps Script URL has not been configured. Please replace "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE" in the HTML code with your actual deployed script URL.');
+                submitButton.disabled = false;
+                submitButton.textContent = 'Submit Feedback';
+                return;
+            }
+
+            try {
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Must use 'no-cors' for simple form submissions to GAS, although it prevents reading the response status/content directly.
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ feedback: feedbackData })
+                });
+                
+                // Due to 'no-cors' mode, we can only confirm the request was sent, not the success status.
+                // We assume success and provide a confirmation message.
+                
+                showModal('Submission Successful', 'Thank you! Your anonymous feedback has been successfully submitted.');
+                form.reset();
+                // Reset form fields to one default field
+                renderFormPage();
+
+            } catch (error) {
+                console.error('Submission Error:', error);
+                showModal('Submission Failed', 'An error occurred while trying to submit the feedback. Please check the console for details and ensure the Google Apps Script URL is correct and deployed.');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Submit Feedback';
+            }
+        }
+
+        // Initialize the app
+        window.onload = renderLandingPage;
+
+    </script>
+</body>
+</html>
